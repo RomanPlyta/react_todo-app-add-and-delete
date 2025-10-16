@@ -45,7 +45,6 @@ export const App: React.FC = () => {
   }, [error]);
 
   const handleFormSubmit = (event: React.FormEvent) => {
-    // Забороняємо перезавантаження сторінки
     event.preventDefault();
 
     const normalizedTitle = newTodoTitle.trim();
