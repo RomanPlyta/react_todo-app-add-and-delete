@@ -1,14 +1,15 @@
 /* eslint-disable jsx-a11y/label-has-associated-control */
 import React from 'react';
+import cn from 'classnames';
 import { Todo } from '../types/Todo';
 
 interface Props {
   todo: Todo;
   onDelete: (id: number) => void;
-  isLoading: boolean;
+  isProcessing: boolean;
 }
 
-export const TodoItem: React.FC<Props> = ({ todo, onDelete, isLoading }) => {
+export const TodoItem: React.FC<Props> = ({ todo, onDelete, isProcessing }) => {
   return (
     <div data-cy="Todo" className={`todo ${todo.completed ? 'completed' : ''}`}>
       <label className="todo__status-label">
@@ -28,13 +29,18 @@ export const TodoItem: React.FC<Props> = ({ todo, onDelete, isLoading }) => {
         type="button"
         className="todo__remove"
         data-cy="TodoDelete"
-        disabled={isLoading}
+        disabled={isProcessing}
         onClick={() => onDelete(todo.id)}
       >
         ×
       </button>
 
-      <div data-cy="TodoLoader" className="modal overlay">
+      <div
+        data-cy="TodoLoader"
+        className={cn('modal', 'overlay', {
+          'is-active': isProcessing,
+        })}
+      >
         <div className="modal-background has-background-white-ter" />
         <div className="loader" />
       </div>
