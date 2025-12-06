@@ -49,6 +49,15 @@ export const App: React.FC = () => {
     event.preventDefault();
 
     const normalizedTitle = newTodoTitle.trim();
+
+    if (!normalizedTitle) {
+      setError('Title should not be empty');
+
+      return;
+    }
+
+    setNewTodoTitle('');
+
     const tempId = 0;
 
     const tempTodo: Todo = {
@@ -61,12 +70,6 @@ export const App: React.FC = () => {
     setTodos(prevTodos => [...prevTodos, tempTodo]);
 
     setProcessingId(tempId);
-
-    if (!normalizedTitle) {
-      setError('Title should not be empty');
-
-      return;
-    }
 
     setIsLoading(true);
 
@@ -87,6 +90,8 @@ export const App: React.FC = () => {
       .finally(() => {
         // ЗАВЖДИ: прибираємо ID з обробки, щоб сховати лоадер
         setProcessingId(null);
+
+        setIsLoading(false);
 
         setTimeout(() => newTodoField.current?.focus(), 0);
       });
