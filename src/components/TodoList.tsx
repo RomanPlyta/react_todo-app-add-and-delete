@@ -5,13 +5,13 @@ import { TodoItem } from './TodoItem';
 interface Props {
   todos: Todo[];
   onDelete: (id: number) => void;
-  processingId: number | null;
+  processingIds: number[];
 }
 
 export const TodoList: React.FC<Props> = ({
   todos,
   onDelete,
-  processingId,
+  processingIds,
 }) => {
   return (
     <section className="todoapp__main" data-cy="TodoList">
@@ -20,7 +20,7 @@ export const TodoList: React.FC<Props> = ({
           key={todo.id}
           todo={todo}
           onDelete={onDelete}
-          isProcessing={todo.id === processingId}
+          isProcessing={processingIds.includes(todo.id)}
         />
       ))}
     </section>

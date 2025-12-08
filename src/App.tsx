@@ -14,7 +14,7 @@ export const App: React.FC = () => {
   const [newTodoTitle, setNewTodoTitle] = useState('');
   const [filter, setFilter] = useState<FilterType>(FilterType.All);
   const [isLoading, setIsLoading] = useState(false);
-  const [processingId, setProcessingId] = useState<number | null>(null);
+  const [processingIds, setProcessingIds] = useState<number[]>([]);
   const newTodoField = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -28,20 +28,14 @@ export const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // Якщо помилки немає, нічого не робимо і виходимо.
-    // Цей 'return' без значення задовольняє TypeScript.
     if (!error) {
       return;
     }
 
-    // Якщо ми дійшли сюди, значить помилка є.
-    // Запускаємо таймер.
     const timerId = setTimeout(() => {
       setError('');
     }, 3000);
 
-    // І повертаємо функцію очищення.
-    // Тепер це єдиний шлях, який повертає значення.
     return () => clearTimeout(timerId);
   }, [error]);
 
@@ -56,8 +50,6 @@ export const App: React.FC = () => {
       return;
     }
 
-    setNewTodoTitle('');
-
     const tempId = 0;
 
     const tempTodo: Todo = {
@@ -68,14 +60,13 @@ export const App: React.FC = () => {
     };
 
     setTodos(prevTodos => [...prevTodos, tempTodo]);
-
-    setProcessingId(tempId);
-
+    setProcessingIds(prev => [...prev, tempId]);
     setIsLoading(true);
 
     createTodo(normalizedTitle)
       .then(newTodoFromServer => {
-        // УСПІХ: міняємо тимчасове завдання (id: 0) на справжнє (з id: 123)
+        setNewTodoTitle('');
+
         setTodos(prevTodos =>
           prevTodos.map(todo =>
             todo.id === tempId ? newTodoFromServer : todo,
@@ -83,16 +74,12 @@ export const App: React.FC = () => {
         );
       })
       .catch(() => {
-        // ПОМИЛКА: видаляємо тимчасове завдання та показуємо помилку
         setTodos(prevTodos => prevTodos.filter(todo => todo.id !== tempId));
         setError('Unable to add a todo');
       })
       .finally(() => {
-        // ЗАВЖДИ: прибираємо ID з обробки, щоб сховати лоадер
-        setProcessingId(null);
-
+        setProcessingIds(prev => prev.filter(id => id !== tempId));
         setIsLoading(false);
-
         setTimeout(() => newTodoField.current?.focus(), 0);
       });
   };
@@ -116,41 +103,55 @@ export const App: React.FC = () => {
       break;
   }
 
-  const activeTodosCount = todos.filter(todo => !todo.completed).length;
-  const completedTodosCount = todos.length - activeTodosCount;
+  const activeTodosCount = todos.filter(
+    todo => !todo.completed && todo.id !== 0,
+  ).length;
+
+  const completedTodosCount = todos.filter(todo => todo.completed).length;
 
   const handleDelete = (todoId: number) => {
-    setProcessingId(todoId);
+    setProcessingIds(prev => [...prev, todoId]);
 
     deleteTodo(todoId)
       .then(() => {
         setTodos(prevTodos => prevTodos.filter(todo => todo.id !== todoId));
+        newTodoField.current?.focus();
       })
       .catch(() => {
         setError('Unable to delete a todo');
+        newTodoField.current?.focus();
       })
       .finally(() => {
-        setProcessingId(null);
+        setProcessingIds(prev => prev.filter(id => id !== todoId));
       });
   };
 
   const handleClearCompleted = () => {
     const completedTodos = todos.filter(todo => todo.completed);
-    const deletePromises = completedTodos.map(todo => deleteTodo(todo.id));
+
+    const deletePromises = completedTodos.map(todo =>
+      deleteTodo(todo.id)
+        .then(() => todo.id)
+        .catch(() => null),
+    );
 
     setIsLoading(true);
 
-    // 3. Виконуємо всі запити паралельно
     Promise.all(deletePromises)
-      .then(() => {
-        // 4. Якщо ВСІ запити успішні, оновлюємо локальний стан
-        setTodos(prevTodos => prevTodos.filter(todo => !todo.completed));
-      })
-      .catch(() => {
-        setError('Unable to delete a todo');
+      .then(results => {
+        const hasErrors = results.some(id => id === null);
+
+        if (hasErrors) {
+          setError('Unable to delete a todo');
+        }
+
+        setTodos(prevTodos =>
+          prevTodos.filter(todo => !results.includes(todo.id)),
+        );
       })
       .finally(() => {
         setIsLoading(false);
+        setTimeout(() => newTodoField.current?.focus(), 0);
       });
   };
 
@@ -186,7 +187,7 @@ export const App: React.FC = () => {
           <TodoList
             todos={filteredTodos}
             onDelete={handleDelete}
-            processingId={processingId}
+            processingIds={processingIds}
           />
         </fieldset>
 
